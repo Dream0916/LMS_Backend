@@ -1,0 +1,31 @@
+version: '3.4'
+
+services:
+  web:
+    build: .
+    env_file:
+      - .env
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --no-input &&
+             python manage.py loaddata ./data/data.json
+             uvicorn conf.asgi:application --host 0.0.0.0 --reload"
+    volumes:
+      - .:/code
+    ports:
+      - 8000:8000
+    depends_on:
+      - db
+
+  db:
+    image: postgres:14
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+
+volumes:
+  postgres_data:
+
