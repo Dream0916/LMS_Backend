@@ -233,15 +233,6 @@ class BookModel(BaseModel):
     category = models.ForeignKey(CategoryModel, on_delete=models.SET_NULL, null=True, blank=True)
     publisher = models.ForeignKey(PublisherModel, on_delete=models.SET_NULL, null=True, blank=True)
 
-    @property
-    def overall_rating(self):
-        # get all the BookRatingModel from the database
-        ratings = BookRatingModel.objects.all().filter(book=self.id)
-        if len(ratings) > 0:
-            return sum([x.rating for x in ratings]) / len(ratings)
-        else:
-            return 0
-
     def __str__(self):
         return self.name
 ```
