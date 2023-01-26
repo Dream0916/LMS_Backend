@@ -23,7 +23,6 @@ docker-compose up
 ##### Start it using manage.py
 
 ```bash
-cd LibraryManagementSystem
 # run the server
 python manage.py runserver localhost:5000
 ```
@@ -31,19 +30,9 @@ python manage.py runserver localhost:5000
 You can access to localhost:5000/admin/ url with this login data:
 
 ```
-username : sergen
-password : sergen123
+username : admin
+password : admin
 ```
-
-###### Move payments to a wallet
-
-You can use
-
-```bash
-python manage.py move_payments bitcoin_testnet_wallet_address
-```
-
-to move all the completed payments to your wallet
 
 ### Deployment
 
@@ -114,33 +103,19 @@ For Rest:
   - Login at : POST /login
   - Register at : POST /api/user
 
-- Users can add/remove books to/from their Carts
-  - POST to Cart endpoint (/api/cart/) with a book id creates a CartItem in the database:
+- Users can add/remove books to/from their Favorite
+  - POST to Cart endpoint (/api/favorite/) with a book id in the database:
     ```py
-    class CartItemModel(BaseModel):
-        cart = models.ForeignKey(CartModel, on_delete=models.CASCADE)
+    class FavoritesModel(BaseModel):
+        user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
         book = models.ForeignKey(BookModel, on_delete=models.CASCADE)
-        amount = models.IntegerField(default=1)
+
+        @property
+
+        def __str__(self):
+            return f"Cart {self.user}'s Book {self.id} (Book {self.book})"
     ```
-    if the CartItem already is created, amount is increased by 1
-  - DELETE to Cart endpoint:
-    - with a book data:
-      - If there is CartItem with the book and amount is >1, it decreases amount by 1, readds the amount to BookModel's store_amount
-      - Otherwise deletes the CartItem
-    - without a book data:
-      - It deletes the Cart from db (sets the deleted flag 1)
-- Users can checkout Carts
-  - POST to payment endpoint( /api/payment ) creates appropriate QR code for the Payment and once the payment is completed, OrderModel is created
-
-#### Payment
-
-- Carts can be bought via bitcoin. For this repository's purposes, when creating Payment for Carts, bitcoin testnet is being used
-- payment_checker.py in cryptopayment app checks if the created Payment model's bitcoin address has the correct value of bitcoin in it, then it creates an Order and Invoice model based on the Payment information (it checks these wallets per 60 seconds in a different thread)
-- Every Payment will have it's own generated bitcoin address in the database. These addresses are being saved as 'wif's.
-- Created an utility function that transfers every bitcoin in the payment addresses to another address, this function is not necessary, although the owner of the book store may want to convert every payment to cash, and transferring every fund to one address would make that goal easier to achieve, check out the move_payment() function in the payment_checker.py
-- This function is added as a manage.py command as well, check out "Move payments to a wallet" section for it
-  - this is a transaction from a payment I made from the database's wif wallet to my testnet account using the method:
-    https://www.blockchain.com/tr/btc-testnet/tx/a4aecf0fe3435cc2161fedbcea84171301207e3ce4a758845cd52b66c2986875
+  - DELETE to Favorite endpoint:
 
 ### Models
 
@@ -258,136 +233,6 @@ class BookModel(BaseModel):
     category = models.ForeignKey(CategoryModel, on_delete=models.SET_NULL, null=True, blank=True)
     publisher = models.ForeignKey(PublisherModel, on_delete=models.SET_NULL, null=True, blank=True)
 
-    @property
-    def overall_rating(self):
-        # get all the BookRatingModel from the database
-        ratings = BookRatingModel.objects.all().filter(book=self.id)
-        if len(ratings) > 0:
-            return sum([x.rating for x in ratings]) / len(ratings)
-        else:
-            return 0
-
     def __str__(self):
         return self.name
-```
-
-##### BookRating
-
-```py
-class BookRatingModel(BaseModel):
-    book = models.ForeignKey(BookModel, on_delete=models.CASCADE, null=False, blank=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=False, blank=False)
-    rating = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(5)], default=0)
-
-    class Meta:
-        unique_together = ['book', 'user']
-
-    def __str__(self):
-        return f"Book {self.book.name} rated {self.rating} by User {self.user.username}"
-```
-
-#### Models for Commerce
-
-##### Shipping
-
-```py
-class ShippingModel(BaseModel):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    address = models.TextField() # address of the shipping
-    city = models.CharField(max_length=85) # city
-    country = models.CharField(max_length=74) # country
-    zipcode = models.CharField(max_length=12) # zipcode
-    is_current = models.BooleanField(default=1)
-
-    class Meta:
-        unique_together = ('user', 'is_current') # a user can only have one current address
-```
-
-##### Cart
-
-```py
-class CartModel(BaseModel):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    items = models.ManyToManyField("CartItemModel")
-    bought = models.BooleanField(default=0) # if the cart has been checkedout
-
-    @property
-    def total_price(self):
-        total = 0
-        for item in self.items.all():
-            total += item.total_price
-        return total
-
-    def __str__(self):
-        return f"User {self.user}'s Cart {self.id}"
-```
-
-##### CartItem
-
-```py
-class CartItemModel(BaseModel):
-    cart = models.ForeignKey(CartModel, on_delete=models.CASCADE)
-    book = models.ForeignKey(BookModel, on_delete=models.CASCADE)
-    amount = models.IntegerField(default=1)
-
-    @property
-    def total_price(self):
-        return self.book.price * self.amount
-
-    def delete(self):
-        # when deleting a cart item, we need to restore the store_amount of the book
-        book = BookModel.objects.get(pk=self.book.id)
-        book.store_amount += self.amount
-        book.save()
-        super(CartItemModel, self).delete()
-
-    def __str__(self):
-        return f"Cart {self.cart}'s Item {self.id} (Book {self.book})"
-```
-
-##### Order
-
-```py
-class OrderModel(BaseModel):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, blank=True, null=True)
-    cart = models.ForeignKey(CartModel, on_delete=models.CASCADE)
-    shipping = models.ForeignKey(ShippingModel, on_delete=models.CASCADE)
-    ordered_at = models.DateField(default=now)
-
-    def __str__(self):
-        return f"Order {self.id} of {self.cart}"
-```
-
-#### Models for Bitcoin Payment
-
-```py
-class Payment(BaseModel):
-    btc_address_wif = models.TextField() # created wif of the btc adress for the payment
-    user = models.ForeignKey(User, blank=True, null=True, on_delete=models.SET_NULL) # user of the payment
-    cart = models.ForeignKey(CartModel, on_delete=models.PROTECT) # cart of the user
-    shipping = models.ForeignKey(ShippingModel, on_delete=models.PROTECT) # shipping address
-    success = models.BooleanField()
-    total_price = models.DecimalField(max_digits=10, decimal_places=2)
-    total_price_btc = models.DecimalField(max_digits=10, decimal_places=8)
-    qr_image = models.ImageField()
-
-    def delete(self):
-        if self.success:
-            return super(Payment, self).delete()
-        else:
-            raise ProtectedError("Can't delete object, Payment isn't completed.")
-
-    def hard_delete(self):
-        raise ProtectedError("Payment objects must not be hard deleted, they include the wif of the bitcoin address, doing so might lose you access to the wallet")
-
-    def __str__(self):
-        return f"Payment created for {self.cart} for user {self.user}"
-
-class Invoice(BaseModel):
-    payment = models.ForeignKey(Payment, on_delete=models.PROTECT)
-    order = models.ForeignKey(OrderModel, on_delete=models.PROTECT)
-    status_code = models.CharField(max_length=3)
-
-    def __str__(self):
-        return f"Order {self.order}'s invoice"
 ```
