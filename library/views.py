@@ -26,9 +26,7 @@ from .serializers import (
     PublisherSerializer,
     RegisterSerializer,
     UserSerializer,
-    FavoriteSerializer,
-    CustomJSONWebTokenSerializer
-    
+    FavoriteSerializer    
 )
 
 jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
@@ -144,12 +142,3 @@ class FavoriteView(
             return Response(data={"detail": f"Success"})
         except FavoritesModel.DoesNotExist:
             return Response(data={"detail": f"Favorite is not found"})
-
-
-class CustomObtainJSONWebTokenView(JSONWebTokenAPIView):
-    """
-    API View that receives a POST with a user's username and password.
-
-    Returns a JSON Web Token that can be used for authenticated requests.
-    """
-    serializer_class = CustomJSONWebTokenSerializer
