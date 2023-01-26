@@ -3,8 +3,9 @@ from django.contrib import admin
 from django.urls import include, path
 from library import views as library_views
 from rest_framework import routers
-from rest_framework_jwt.views import obtain_jwt_token
-
+from rest_framework_jwt.views import ObtainJSONWebToken
+from library.serializers import CustomJWTSerializer
+from rest_framework_jwt.views import JSONWebTokenAPIView
 from . import settings
 
 router = routers.DefaultRouter()
@@ -19,8 +20,9 @@ urlpatterns = (
     [
         path("admin/", admin.site.urls),
         path("api/", include(router.urls)),
-        path("register/", library_views.RegisterView.as_view({"post": "create"})),
-        path("login/", obtain_jwt_token),
+        path("register/",
+             library_views.RegisterView.as_view({"post": "create"})),
+        path("login/", ObtainJSONWebToken.as_view(serializer_class=CustomJWTSerializer)),
     ]
     + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
