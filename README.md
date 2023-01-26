@@ -20,13 +20,6 @@ pip install -r requirements.txt
 docker-compose up
 ```
 
-You can access to localhost:8000/admin/ url with this login data:
-
-```
-username : admin
-password : admin
-```
-
 ### Deployment
 
 Be sure set DEBUG = False, is_test_data in BaseModel (which every model is derived from) is dependent on this setting, if you set DEBUG False, is_test_data will be False and the API won't show up data with is_test_data = False, so the initial data from this repository's database won't show up.
