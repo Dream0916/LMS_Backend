@@ -10,6 +10,7 @@ from rest_framework.permissions import (
 from rest_framework.response import Response
 from rest_framework_jwt.authentication import JSONWebTokenAuthentication
 from rest_framework_jwt.settings import api_settings
+from rest_framework_jwt.views import JSONWebTokenAPIView
 
 from .models import (
     AuthorModel,
@@ -25,11 +26,15 @@ from .serializers import (
     PublisherSerializer,
     RegisterSerializer,
     UserSerializer,
-    FavoriteSerializer
+    FavoriteSerializer,
+    CustomJSONWebTokenSerializer
+    
 )
 
 jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
 jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
+jwt_decode_handler = api_settings.JWT_DECODE_HANDLER
+jwt_get_username_from_payload = api_settings.JWT_PAYLOAD_GET_USERNAME_HANDLER
 
 
 class AuthorView(viewsets.ReadOnlyModelViewSet):
@@ -139,3 +144,12 @@ class FavoriteView(
             return Response(data={"detail": f"Success"})
         except FavoritesModel.DoesNotExist:
             return Response(data={"detail": f"Favorite is not found"})
+
+
+class CustomObtainJSONWebTokenView(JSONWebTokenAPIView):
+    """
+    API View that receives a POST with a user's username and password.
+
+    Returns a JSON Web Token that can be used for authenticated requests.
+    """
+    serializer_class = CustomJSONWebTokenSerializer
