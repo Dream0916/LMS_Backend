@@ -33,14 +33,14 @@ LOGGING = {
     'handlers': {
         'file': {
             'class': 'logging.FileHandler',
-            'filename': './logs/general.log',
+            'filename': './general.log',
             'level' : "INFO",
             'formatter' : 'verbose'
         },
         'requestlogs_to_file': {
             'level': 'INFO',
             'class': 'logging.FileHandler',
-            'filename': './logs/requestlogs.log',
+            'filename': './requestlogs.log',
         },
     },
     'loggers': {
