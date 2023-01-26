@@ -1,6 +1,6 @@
-# Book Store API
+# User Authentication and BOOK API
 
-Book store api written in django rest framework
+User Authentication and BOOK API written in django rest framework + JWT
 
 ### Installing
 
@@ -20,14 +20,7 @@ pip install -r requirements.txt
 docker-compose up
 ```
 
-##### Start it using manage.py
-
-```bash
-# run the server
-python manage.py runserver localhost:5000
-```
-
-You can access to localhost:5000/admin/ url with this login data:
+You can access to localhost:8000/admin/ url with this login data:
 
 ```
 username : admin
@@ -42,7 +35,8 @@ For Rest:
 [Django Deployment Checklist](https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/)
 
 ### Features
-
+- User login and register with Email , Password. 
+  return JWT token
 - book, author, publisher, category endpoints return the appropriate serialized models,
 - book endpoint has url parameter that makes it easy to filter
   - you can filter books by author, publisher,category, as well as order them via price, or search books via their names
